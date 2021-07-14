@@ -465,8 +465,7 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
         ctx->reordered_opaque = out_opaque->reordered_opaque;
         wallclock = out_opaque->wallclock;
         if (av_packet_add_side_data(pkt, AV_PKT_DATA_STRINGS_METADATA, out_opaque->metadata, out_opaque->metadata_size) < 0) {
-            av_free(out_opaque->metadata);
-            out_opaque->metadata = NULL;
+            av_freep(&out_opaque->metadata);
             out_opaque->metadata_size = 0;
         }
     } else {
