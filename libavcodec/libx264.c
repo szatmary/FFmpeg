@@ -51,6 +51,8 @@
 typedef struct X264Opaque {
     int64_t reordered_opaque;
     int64_t wallclock;
+    uint8_t *metadata;
+    size_t metadata_size;
 } X264Opaque;
 
 typedef struct X264Context {
@@ -326,6 +328,7 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
 
         x4->reordered_opaque[x4->next_reordered_opaque].reordered_opaque = frame->reordered_opaque;
         x4->reordered_opaque[x4->next_reordered_opaque].wallclock = wallclock;
+        x4->reordered_opaque[x4->next_reordered_opaque].metadata = av_packet_pack_dictionary(frame->metadata, &x4->reordered_opaque[x4->next_reordered_opaque].metadata_size);
         if (ctx->export_side_data & AV_CODEC_EXPORT_DATA_PRFT)
             x4->reordered_opaque[x4->next_reordered_opaque].wallclock = av_gettime();
         x4->pic.opaque = &x4->reordered_opaque[x4->next_reordered_opaque];
@@ -461,6 +464,11 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
         out_opaque < &x4->reordered_opaque[x4->nb_reordered_opaque]) {
         ctx->reordered_opaque = out_opaque->reordered_opaque;
         wallclock = out_opaque->wallclock;
+        if (av_packet_add_side_data(pkt, AV_PKT_DATA_STRINGS_METADATA, out_opaque->metadata, out_opaque->metadata_size) < 0) {
+            av_free(out_opaque->metadata);
+            out_opaque->metadata = NULL;
+            out_opaque->metadata_size = 0;
+        }
     } else {
         // Unexpected opaque pointer on picture output
         ctx->reordered_opaque = 0;
